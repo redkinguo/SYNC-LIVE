@@ -285,10 +285,10 @@ class RelayWorker:
             self.events.put(("exited", return_code, was_requested))
 
     def stop(self) -> None:
+        self.stop_requested = True
         process = self.process
         if process is None:
             return
-        self.stop_requested = True
         if process.poll() is None:
             process.terminate()
             try:
@@ -306,6 +306,7 @@ class RelayApp(tk.Tk):
         self.config_data = load_config()
         self.events: queue.Queue = queue.Queue()
         self.worker = RelayWorker(self.events)
+        self._restart_after_id: str | None = None
         self.destination_rows: list[dict[str, tk.Variable]] = []
         self.auto_restart_var = tk.BooleanVar(value=bool(self.config_data.get("auto_restart", True)))
         self.status_var = tk.StringVar(value="停止中")
@@ -360,7 +361,10 @@ class RelayApp(tk.Tk):
         footer.columnconfigure(0, weight=1)
         self.log_text = tk.Text(footer, height=9, state="disabled", wrap="none", background="#111827", foreground="#e5e7eb")
         self.log_text.grid(row=0, column=0, columnspan=5, sticky="ew", pady=(0, 10))
-        ttk.Checkbutton(footer, text="異常終了時に自動再接続", variable=self.auto_restart_var).grid(row=1, column=0, sticky="w")
+        ttk.Checkbutton(
+            footer, text="異常終了時に自動再接続", variable=self.auto_restart_var,
+            command=self._on_auto_restart_changed,
+        ).grid(row=1, column=0, sticky="w")
         ttk.Button(footer, text="設定を保存", command=self._save).grid(row=1, column=1, padx=4)
         self.start_button = ttk.Button(footer, text="中継開始", command=self._start)
         self.start_button.grid(row=1, column=2, padx=4)
@@ -431,6 +435,8 @@ class RelayApp(tk.Tk):
     def _start(self) -> None:
         if self.worker.running:
             return
+        self._cancel_restart()
+        self.stop_button.configure(state="disabled")
         try:
             config = self._collect_config()
             destinations = [item for item in config["destinations"] if item["enabled"]]
@@ -448,9 +454,31 @@ class RelayApp(tk.Tk):
             messagebox.showerror("中継を開始できません", str(exc))
 
     def _stop(self) -> None:
+        self._cancel_restart()
+        was_running = self.worker.running
         self.worker.stop()
-        self.status_var.set("停止処理中")
-        self._append_log("停止処理を開始しました。")
+        if was_running:
+            self.status_var.set("停止処理中")
+            self._append_log("停止処理を開始しました。")
+        else:
+            self.status_var.set("停止中")
+            self.start_button.configure(state="normal")
+            self.stop_button.configure(state="disabled")
+            self._append_log("中継を停止しました。")
+
+    def _cancel_restart(self) -> None:
+        if self._restart_after_id is not None:
+            self.after_cancel(self._restart_after_id)
+            self._restart_after_id = None
+
+    def _on_auto_restart_changed(self) -> None:
+        if not self.auto_restart_var.get():
+            pending = self._restart_after_id is not None
+            self._cancel_restart()
+            if pending:
+                self._append_log("自動再接続をキャンセルしました。")
+            if not self.worker.running:
+                self.stop_button.configure(state="disabled")
 
     def _append_log(self, line: str) -> None:
         self.log_text.configure(state="normal")
@@ -473,9 +501,11 @@ class RelayApp(tk.Tk):
                         self.status_var.set("配信中")
                 elif event_type == "exited":
                     return_code, was_requested = event[1], event[2]
+                    self._cancel_restart()
                     self.start_button.configure(state="normal")
                     self.stop_button.configure(state="disabled")
-                    if was_requested:
+                    # A stop may arrive after the worker queued this exit event.
+                    if was_requested or self.worker.stop_requested:
                         self.status_var.set("停止中")
                         self._append_log("中継を停止しました。")
                     else:
@@ -483,18 +513,25 @@ class RelayApp(tk.Tk):
                         self._append_log(f"中継プロセスが終了しました（終了コード: {return_code}）。")
                         if self.auto_restart_var.get():
                             self._append_log("5秒後に自動再接続します。")
-                            self.after(5000, self._restart_if_needed)
+                            self.stop_button.configure(state="normal")
+                            self._restart_after_id = self.after(5000, self._restart_if_needed)
         except queue.Empty:
             pass
         self.after(100, self._drain_events)
 
     def _restart_if_needed(self) -> None:
-        if self.worker.running or self.status_var.get() in ("停止中", "停止処理中"):
+        self._restart_after_id = None
+        if (
+            not self.auto_restart_var.get()
+            or self.worker.running
+            or self.status_var.get() in ("停止中", "停止処理中")
+        ):
             return
         self._append_log("自動再接続を試みます。")
         self._start()
 
     def _on_close(self) -> None:
+        self._cancel_restart()
         if self.worker.running:
             self.worker.stop()
         self._save(silent=True)
