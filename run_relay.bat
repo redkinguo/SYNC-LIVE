@@ -1,4 +1,2 @@
 @echo off
-cd /d "%~dp0"
-python relay_app.py
-if errorlevel 1 pause
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_relay.ps1"
