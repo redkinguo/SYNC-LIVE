@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SYNC LIVE コメントオーバーレイ</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { font-family: Inter, "Noto Sans JP", "Yu Gothic UI", sans-serif; color: #fff; }
+    #feed { position: absolute; left: 3.2%; bottom: 5%; width: min(48%, 720px); display: flex; flex-direction: column; justify-content: flex-end; gap: 9px; pointer-events: none; }
+    .comment { display: grid; flex: 0 0 auto; grid-template-columns: auto 1fr; align-items: start; gap: 9px; width: fit-content; max-width: 100%; padding: 10px 14px 11px 11px; border: 1px solid #ffffff26; border-radius: 13px; background: #10131bdd; box-shadow: 0 5px 20px #0008; backdrop-filter: blur(8px); animation: arrive .2s ease-out; }
+    .mark { min-width: 45px; margin-top: 1px; padding: 4px 6px; border-radius: 6px; text-align: center; font-size: 10px; font-weight: 800; letter-spacing: .2px; }
+    .content { min-width: 0; }
+    .meta { display: flex; align-items: center; gap: 7px; margin-bottom: 3px; font-size: 12px; font-weight: 750; text-shadow: 0 1px 3px #000; }
+    .meta time { color: #b8bdc8; font-size: 10px; font-weight: 500; }
+    .text { color: #f3f4f7; font-size: 16px; line-height: 1.35; overflow-wrap: anywhere; white-space: pre-wrap; text-shadow: 0 1px 3px #000; }
+    @keyframes arrive { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+  <div id="feed" aria-live="polite"></div>
+  <script>
+    const platforms = {
+      twitch: { name: 'TWITCH', color: '#a970ff' },
+      kick: { name: 'KICK', color: '#38d986' },
+      tiktok: { name: 'TIKTOK', color: '#ff4f8b' },
+      youtube: { name: 'YOUTUBE', color: '#ff525b' },
+    };
+    const feed = document.getElementById('feed');
+    const seen = new Set();
+    function safe(value) {
+      const node = document.createElement('span');
+      node.textContent = String(value ?? '');
+      return node.textContent;
+    }
+    function add(message) {
+      if (!message || !platforms[message.platform]) return;
+      const id = message.id || `${message.platform}:${message.createdAt}:${message.user}:${message.text}`;
+      if (seen.has(id)) return;
+      seen.add(id);
+      if (seen.size > 3000) seen.delete(seen.values().next().value);
+      const platform = platforms[message.platform];
+      const previousRows = [...feed.children].map(element => ({ element, top: element.getBoundingClientRect().top }));
+      const row = document.createElement('article');
+      row.className = 'comment';
+      const mark = document.createElement('span'); mark.className = 'mark'; mark.textContent = platform.name;
+      mark.style.color = platform.color; mark.style.background = `${platform.color}26`;
+      const content = document.createElement('div'); content.className = 'content';
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const user = document.createElement('span'); user.textContent = safe(message.user);
+      const time = document.createElement('time'); time.textContent = safe(message.time || '');
+      const text = document.createElement('div'); text.className = 'text'; text.textContent = safe(message.text);
+      meta.append(user, time); content.append(meta, text); row.append(mark, content); feed.append(row);
+      for (const previous of previousRows) {
+        const offset = previous.top - previous.element.getBoundingClientRect().top;
+        if (Math.abs(offset) > 1) previous.element.animate(
+          [{ transform: `translateY(${offset}px)` }, { transform: 'translateY(0)' }],
+          { duration: 420, easing: 'cubic-bezier(.2,.75,.25,1)' },
+        );
+      }
+    }
+    window.addEventListener('sync-live-state', ({ detail }) => {
+      (detail.messages || []).slice().reverse().forEach(add);
+    });
+    const events = new EventSource('/api/events');
+    events.onmessage = event => {
+      const packet = JSON.parse(event.data);
+      if (packet.type === 'message') add(packet.data);
+      if (packet.type === 'state') (packet.data.messages || []).slice().reverse().forEach(add);
+    };
+  </script>
+<script>
+// Recover missed stream events without calling any external service.
+(() => {
+  let busy = false;
+  async function sync() {
+    if (busy) return;
+    busy = true;
+    try {
+      const response = await fetch('/api/state', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return;
+      const snapshot = await response.json();
+      window.dispatchEvent(new CustomEvent('sync-live-state', { detail: snapshot }));
+    } catch { /* EventSource and the next local poll both retry independently. */ }
+    finally { busy = false; }
+  }
+  setInterval(sync, 2000);
+  window.addEventListener('online', sync);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void sync(); });
+  void sync();
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>配信情報の個別設定 — SYNC LIVE</title>
+<style>
+:root{color-scheme:dark;--bg:#111318;--panel:#191c24;--panel2:#20242e;--line:#303542;--text:#edf0f6;--muted:#9aa2b1;--accent:#a58bff;--good:#68d9a5;--bad:#ff8088}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 10% 0,#241d37 0,transparent 40%),var(--bg);color:var(--text);font:15px/1.55 "Segoe UI",Meiryo,sans-serif}
+main{max-width:970px;margin:34px auto;padding:0 20px 50px}.back{color:var(--accent);text-decoration:none;font-weight:700}.head{margin:18px 0 22px}.head h1{font-size:25px;margin:0 0 7px}.head p,.note{color:var(--muted);font-size:13px}
+.card{background:rgba(25,28,36,.96);border:1px solid var(--line);border-radius:17px;overflow:hidden;box-shadow:0 18px 52px #0004}
+.tabs{display:flex;gap:8px;padding:15px;border-bottom:1px solid var(--line);background:#ffffff04}.tabs button{border:1px solid var(--line);border-radius:10px;padding:10px 17px;background:var(--panel2);color:var(--text);font-weight:700;cursor:pointer}.tabs button[aria-selected=true]{background:#322951;border-color:#7965c4;color:#d8ceff}
+.panel{padding:22px;display:none}.panel.active{display:block}.panel h2{font-size:19px;margin:0 0 3px}.desc{color:var(--muted);margin:0 0 19px;font-size:13px}
+.field{display:grid;gap:7px;margin:15px 0}.field label{font-weight:700;font-size:13px}.field input,.field textarea{width:100%;border:1px solid #414755;background:#11141a;color:var(--text);border-radius:9px;padding:11px 12px;font:inherit;outline:none}.field input:focus,.field textarea:focus{border-color:var(--accent)}textarea{min-height:90px;resize:vertical}.field small,.help{color:var(--muted);font-size:12px}.lookup{position:relative}.results{display:grid;gap:4px;margin-top:5px}.results button{border:1px solid var(--line);border-radius:7px;background:#252936;color:var(--text);padding:9px 11px;text-align:left;cursor:pointer}.results button:hover{border-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.check{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.check input{width:auto}
+.actions{display:flex;gap:10px;align-items:center;margin-top:21px}.primary{background:linear-gradient(135deg,#9d79ff,#775ce0);color:white;border:0;border-radius:9px;padding:11px 18px;font-weight:800;cursor:pointer}.primary:disabled{opacity:.55;cursor:wait}.status{min-height:22px;font-size:13px}.status.ok{color:var(--good)}.status.error{color:var(--bad)}
+.fixed-box{margin:15px 0 22px;padding:15px;border:1px solid #4a4265;border-radius:11px;background:#211e2b}.fixed-box h3{font-size:15px;margin:0 0 5px}.fixed-box p{margin:0 0 10px}.fixed-box textarea{width:100%;border:1px solid #414755;background:#11141a;color:var(--text);border-radius:9px;padding:11px 12px;font:inherit;min-height:90px;resize:vertical}.fixed-box textarea:focus{outline:none;border-color:var(--accent)}
+.fixed-box a{display:inline-block;margin-top:8px;color:#cbbdff;font-weight:700;text-decoration:none;font-size:12px}
+.upload{border:1px dashed #535b6b;padding:16px;border-radius:10px;background:#11141a}.preview{max-width:320px;max-height:180px;display:block;margin-top:10px;border-radius:8px}.limitations{margin-top:19px;padding:12px 14px;border:1px solid #383d48;border-radius:10px;color:var(--muted);font-size:12px}
+@media(max-width:620px){main{margin-top:20px}.tabs{overflow:auto}.tabs button{white-space:nowrap}.row{grid-template-columns:1fr}.panel{padding:16px}}
+</style>
+</head>
+<body><main>
+<a class="back" href="/">← SYNC LIVEに戻る</a>
+<header class="head"><h1>配信先ごとの情報設定</h1><p>タイトル、カテゴリー、タグをサービスごとに別々に設定できます。入力して「保存して反映」を押したサービスだけ更新します。</p></header>
+<section class="card">
+<nav class="tabs" role="tablist" aria-label="配信サービス">
+<button type="button" role="tab" aria-selected="true" data-tab="youtube">YouTube</button>
+<button type="button" role="tab" aria-selected="false" data-tab="twitch">Twitch</button>
+<button type="button" role="tab" aria-selected="false" data-tab="kick">Kick</button>
+</nav>
+<section class="panel active" id="panel-youtube" role="tabpanel">
+<h2>YouTube</h2><p class="desc">YouTube Studioで選択済みの配信枠の情報を更新します。</p>
+<div class="fixed-box"><h3>YouTubeの説明を次回から固定</h3><p class="help">今の配信枠の説明をこのPCに保存して、SYNC LIVEが今後新しく作る配信枠に使います。既存の配信枠は変更しません。</p><textarea id="yt-fixed-description" maxlength="5000" placeholder="次回から使う説明文"></textarea><div class="actions"><button class="primary" id="yt-pin-current" type="button">今の枠の説明を固定</button><button class="primary" id="yt-save-fixed" type="button">入力した説明を固定</button></div><div class="status" id="status-fixed-youtube" role="status" aria-live="polite"></div></div>
+<div class="field"><label for="yt-title">タイトル</label><input id="yt-title" maxlength="100" placeholder="変更するタイトル（100文字以内）"></div>
+<div class="field"><label for="yt-description">説明</label><textarea id="yt-description" maxlength="5000" placeholder="変更する場合だけ入力"></textarea><label class="check"><input id="yt-clear-description" type="checkbox">説明を空にする</label></div>
+<div class="row">
+<div class="field lookup"><label for="yt-category-search">カテゴリー</label><input id="yt-category-search" placeholder="カテゴリー名で検索"><input id="yt-category-id" type="hidden"><div class="results" id="yt-category-results" hidden></div><small>候補を選ぶと配信枠に設定します。未選択なら現在のカテゴリーを維持します。</small></div>
+<div class="field"><label for="yt-tags">タグ</label><textarea id="yt-tags" placeholder="タグをカンマまたは改行で区切る"></textarea><label class="check"><input id="yt-clear-tags" type="checkbox">タグをすべて削除する</label><small>合計500文字以内。空欄のままなら現在のタグを維持します。</small></div>
+</div>
+<div class="field"><label for="yt-thumbnail">サムネイル画像（JPG / PNG、2MB以下）</label><div class="upload"><input id="yt-thumbnail" type="file" accept="image/jpeg,image/png"><img id="yt-preview" class="preview" alt="選択中のサムネイル" hidden></div><small>YouTubeへアップロードすると現在の選択中の配信枠に反映されます。</small></div>
+<div class="actions"><button class="primary" data-save="youtube">入力した情報を保存して反映</button><button class="primary" id="yt-upload" type="button">サムネイルをYouTubeへ反映</button></div>
+<div class="status" id="status-youtube" role="status" aria-live="polite"></div>
+<div class="limitations">YouTubeの書き込みは公式APIの利用枠を使います。タイトルなどの更新は通常、読み取り1回と更新1回（合計約51 units）、サムネイル更新は50 unitsです。利用枠超過時はYouTube Studioで手動更新してください。</div>
+</section>
+<section class="panel" id="panel-twitch" role="tabpanel">
+<h2>Twitch</h2><p class="desc">公式 Twitch API で配信タイトル、カテゴリー、チャンネルタグを更新します。</p>
+<div class="fixed-box"><h3>Twitchチャンネル説明</h3><p class="help">チャンネルプロフィールに常時表示される説明です。今の説明を読み込んで維持するか、編集して公式APIで反映できます。</p><textarea id="tw-profile-description" maxlength="300" placeholder="Twitchのチャンネル説明（300文字以内）"></textarea><div class="actions"><button class="primary" id="tw-load-description" type="button">今の説明を読み込む</button><button class="primary" id="tw-save-description" type="button">チャンネル説明を反映</button></div><div class="status" id="status-fixed-twitch" role="status" aria-live="polite"></div><small>説明の反映には Twitch の user:edit 許可が必要です。許可を追加するには下のリンクを開き、Twitch画面で許可してください。</small><a href="/oauth/start/twitch?include=profile-description">Twitchチャンネル説明の追加許可へ（user:edit）</a></div>
+<div class="field"><label for="tw-title">タイトル</label><input id="tw-title" maxlength="140" placeholder="変更するタイトル（140文字以内）"></div>
+<div class="field lookup"><label for="tw-category-search">カテゴリー / ゲーム</label><input id="tw-category-search" placeholder="名前を入力して検索"><input id="tw-category-id" type="hidden"><div class="results" id="tw-category-results" hidden></div><small>候補を選ぶと設定されます。未選択なら現在のカテゴリーを維持します。</small></div>
+<div class="field"><label for="tw-tags">タグ</label><textarea id="tw-tags" placeholder="タグをカンマまたは改行で区切る"></textarea><label class="check"><input id="tw-clear-tags" type="checkbox">タグをすべて削除する</label><small>最大10個、各25文字以内。Twitchのタグ規則に合う文字を使用してください。</small></div>
+<div class="actions"><button class="primary" data-save="twitch">入力した情報を保存して反映</button></div>
+<div class="status" id="status-twitch" role="status" aria-live="polite"></div>
+<div class="limitations">Twitchの公式APIでタイトル、カテゴリー、タグを更新できます。カスタム配信サムネイルの更新欄は公式APIにないため、サムネイルはTwitch側で設定してください。</div>
+</section>
+<section class="panel" id="panel-kick" role="tabpanel">
+<h2>Kick</h2><p class="desc">公式 Kick API で配信タイトル、カテゴリー、カスタムタグを更新します。</p>
+<div class="fixed-box"><h3>Kickチャンネル説明</h3><p class="help">Kickの公開APIはチャンネル説明の書き込みに対応していません。今の説明を読み込んで保存・コピーし、Kick側のチャンネル設定に貼り付けられます。</p><textarea id="kick-profile-description" maxlength="5000" placeholder="Kickのチャンネル説明"></textarea><div class="actions"><button class="primary" id="kick-load-description" type="button">今の説明を読み込む</button><button class="primary" id="kick-save-description" type="button">このPCに保存してコピー</button></div><div class="status" id="status-fixed-kick" role="status" aria-live="polite"></div></div>
+<div class="field"><label for="kick-title">タイトル</label><input id="kick-title" maxlength="200" placeholder="変更するタイトル"></div>
+<div class="field lookup"><label for="kick-category-search">カテゴリー</label><input id="kick-category-search" placeholder="3文字以上入力して検索"><input id="kick-category-id" type="hidden"><div class="results" id="kick-category-results" hidden></div><small>候補を選ぶと設定されます。未選択なら現在のカテゴリーを維持します。</small></div>
+<div class="field"><label for="kick-tags">カスタムタグ</label><textarea id="kick-tags" placeholder="タグをカンマまたは改行で区切る"></textarea><label class="check"><input id="kick-clear-tags" type="checkbox">タグをすべて削除する</label><small>最大10個です。カテゴリー自体の公式カテゴリータグは自動で扱われます。</small></div>
+<div class="actions"><button class="primary" data-save="kick">入力した情報を保存して反映</button></div>
+<div class="status" id="status-kick" role="status" aria-live="polite"></div>
+<div class="limitations">Kickの公式APIはタイトル・カテゴリー・カスタムタグを更新できます。サムネイルはAPIで任意の画像を指定できないため、Kick側の配信管理画面で設定してください。</div>
+</section>
+</section>
+<p class="note">YouTubeで利用枠超過が返った場合、非公式APIで制限を回避することはしません。TwitchとKickも、公式APIが認証不足や利用制限を返した場合は画面に理由を表示します。</p>
+</main>
+<script>
+const tabButtons=[...document.querySelectorAll('[data-tab]')];
+function setTab(name){tabButtons.forEach(b=>{const on=b.dataset.tab===name;b.setAttribute('aria-selected',String(on));document.getElementById('panel-'+b.dataset.tab).classList.toggle('active',on)})}
+tabButtons.forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+function setStatus(platform,text,error=false){const el=document.getElementById('status-'+platform);el.textContent=text;el.className='status '+(error?'error':'ok')}
+function setFixedStatus(platform,text,error=false){const el=document.getElementById('status-fixed-'+platform);el.textContent=text;el.className='status '+(error?'error':'ok')}
+function parseTags(value){return [...new Set(value.split(/[,\n\r]/).map(x=>x.trim()).filter(Boolean))]}
+function enc(value){return encodeURIComponent(value)}
+async function loadFixedDescriptions(){
+  try{const response=await fetch('/api/metadata/descriptions',{cache:'no-store'});const data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'固定説明を読み込めません');document.getElementById('yt-fixed-description').value=data.descriptions.youtube||'';document.getElementById('tw-profile-description').value=data.descriptions.twitch||'';document.getElementById('kick-profile-description').value=data.descriptions.kick||''}
+  catch(error){setFixedStatus('youtube',error.message,true)}
+}
+async function saveFixedDescriptions(){
+  const descriptions={youtube:document.getElementById('yt-fixed-description').value,twitch:document.getElementById('tw-profile-description').value,kick:document.getElementById('kick-profile-description').value};
+  const response=await fetch('/api/metadata/descriptions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(descriptions)});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'固定説明を保存できません');return result;
+}
+async function searchCategories(platform,query){
+  const results=document.getElementById(platform==='youtube'?'yt-category-results':platform==='twitch'?'tw-category-results':'kick-category-results');
+  const hidden=document.getElementById(platform==='youtube'?'yt-category-id':platform==='twitch'?'tw-category-id':'kick-category-id');
+  results.replaceChildren();hidden.value='';
+  if((platform==='kick'&&query.trim().length<3)||(platform==='twitch'&&!query.trim())){results.hidden=true;return}
+  try{
+    const response=await fetch('/api/metadata/categories/'+platform+'?q='+enc(query),{cache:'no-store'});
+    const data=await response.json();
+    if(!response.ok||!data.ok)throw new Error(data.error||'カテゴリーを取得できません');
+    results.hidden=false;
+    if(!data.categories.length){const empty=document.createElement('small');empty.textContent='候補がありません';results.append(empty);return}
+    data.categories.forEach(item=>{const button=document.createElement('button');button.type='button';button.textContent=item.name;button.addEventListener('click',()=>{hidden.value=item.id;document.getElementById(platform==='youtube'?'yt-category-search':platform==='twitch'?'tw-category-search':'kick-category-search').value=item.name;results.hidden=true});results.append(button)})
+  }catch(error){results.hidden=false;const msg=document.createElement('small');msg.textContent=error.message;results.append(msg)}
+}
+const searchTimers={};
+[['youtube','yt-category-search'],['twitch','tw-category-search'],['kick','kick-category-search']].forEach(([platform,id])=>{
+  document.getElementById(id).addEventListener('input',event=>{clearTimeout(searchTimers[platform]);searchTimers[platform]=setTimeout(()=>searchCategories(platform,event.target.value),500)})
+});
+async function savePlatform(platform){
+  const prefix=platform==='youtube'?'yt':platform==='twitch'?'tw':'kick';
+  const title=document.getElementById(prefix+'-title').value.trim();
+  const categoryId=document.getElementById(prefix+'-category-id').value;
+  const tagText=document.getElementById(prefix+'-tags').value;
+  const clearTags=document.getElementById(prefix+'-clear-tags').checked;
+  const payload={title,categoryId};
+  if(tagText.trim()||clearTags)payload.tags=parseTags(tagText);
+  if(platform==='youtube'){
+    const description=document.getElementById('yt-description').value;
+    if(description.trim()||document.getElementById('yt-clear-description').checked)payload.description=description;
+  }
+  const button=document.querySelector('[data-save="'+platform+'"]');
+  button.disabled=true;setStatus(platform,'公式APIで保存中...');
+  try{
+    const response=await fetch('/api/metadata/'+platform,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    const result=await response.json();
+    if(!response.ok||!result.ok)throw new Error(result.error||'更新に失敗しました');
+    setStatus(platform,result.detail||'保存して反映しました');
+  }catch(error){setStatus(platform,error.message,true)}
+  finally{button.disabled=false}
+}
+document.querySelectorAll('[data-save]').forEach(button=>button.addEventListener('click',()=>savePlatform(button.dataset.save)));
+let previewUrl='';
+document.getElementById('yt-thumbnail').addEventListener('change',event=>{
+  const file=event.target.files?.[0];const img=document.getElementById('yt-preview');
+  if(previewUrl)URL.revokeObjectURL(previewUrl);
+  if(!file){img.hidden=true;return}
+  previewUrl=URL.createObjectURL(file);img.src=previewUrl;img.hidden=false;
+});
+document.getElementById('yt-upload').addEventListener('click',async()=>{
+  const file=document.getElementById('yt-thumbnail').files?.[0];const button=document.getElementById('yt-upload');
+  if(!file){setStatus('youtube','先にJPGまたはPNG画像を選択してください。',true);return}
+  if(file.size>2*1024*1024){setStatus('youtube','画像は2MB以下にしてください。',true);return}
+  button.disabled=true;setStatus('youtube','YouTubeへアップロード中...');
+  try{
+    const response=await fetch('/api/metadata/youtube/thumbnail',{method:'POST',headers:{'content-type':file.type},body:file});
+    const result=await response.json();
+    if(!response.ok||!result.ok)throw new Error(result.error||'サムネイル更新に失敗しました');
+    setStatus('youtube',result.detail||'サムネイルを反映しました');
+  }catch(error){setStatus('youtube',error.message,true)}
+  finally{button.disabled=false}
+});
+document.getElementById('yt-save-fixed').addEventListener('click',async()=>{
+  const button=document.getElementById('yt-save-fixed');button.disabled=true;setFixedStatus('youtube','このPCに保存中...');
+  try{await saveFixedDescriptions();setFixedStatus('youtube','YouTube説明をこのPCに保存しました。次回SYNC LIVEが新しく作る配信枠に使います。')}
+  catch(error){setFixedStatus('youtube',error.message,true)}finally{button.disabled=false}
+});
+document.getElementById('yt-pin-current').addEventListener('click',async()=>{
+  const button=document.getElementById('yt-pin-current');button.disabled=true;setFixedStatus('youtube','YouTubeから現在の説明を読み込み中...');
+  try{const response=await fetch('/api/metadata/youtube/fix-current-description',{method:'POST'});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'現在の説明を読み込めません');await loadFixedDescriptions();setFixedStatus('youtube',result.detail)}
+  catch(error){setFixedStatus('youtube',error.message,true)}finally{button.disabled=false}
+});
+document.getElementById('tw-load-description').addEventListener('click',async()=>{
+  const button=document.getElementById('tw-load-description');button.disabled=true;setFixedStatus('twitch','Twitchから読み込み中...');
+  try{const response=await fetch('/api/metadata/twitch',{cache:'no-store'});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'現在の説明を取得できません');document.getElementById('tw-profile-description').value=result.metadata.description||'';setFixedStatus('twitch','現在のチャンネル説明を読み込みました。反映ボタンを押さなければ変更されません。')}
+  catch(error){setFixedStatus('twitch',error.message,true)}finally{button.disabled=false}
+});
+document.getElementById('tw-save-description').addEventListener('click',async()=>{
+  const button=document.getElementById('tw-save-description');button.disabled=true;setFixedStatus('twitch','Twitchへ反映中...');
+  try{const response=await fetch('/api/metadata/twitch/description',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({description:document.getElementById('tw-profile-description').value})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Twitch説明を更新できません');setFixedStatus('twitch',result.detail)}
+  catch(error){setFixedStatus('twitch',error.message,true)}finally{button.disabled=false}
+});
+document.getElementById('kick-save-description').addEventListener('click',async()=>{
+  const button=document.getElementById('kick-save-description');button.disabled=true;setFixedStatus('kick','このPCに保存中...');
+  try{await saveFixedDescriptions();const value=document.getElementById('kick-profile-description').value;try{await navigator.clipboard.writeText(value);setFixedStatus('kick','Kick説明をこのPCに保存し、コピーしました。Kickのチャンネル設定に貼り付けてください。')}catch{setFixedStatus('kick','Kick説明はこのPCに保存しました。クリップボードへのコピーはできませんでした。',true)}}
+  catch(error){setFixedStatus('kick',error.message,true)}finally{button.disabled=false}
+});
+document.getElementById('kick-load-description').addEventListener('click',async()=>{
+  const button=document.getElementById('kick-load-description');button.disabled=true;setFixedStatus('kick','Kickから読み込み中...');
+  try{const response=await fetch('/api/metadata/kick',{cache:'no-store'});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'現在の説明を取得できません');document.getElementById('kick-profile-description').value=result.metadata.description||'';setFixedStatus('kick','現在のチャンネル説明を読み込みました。反映ボタンからこのPCへ保存できます。')}
+  catch(error){setFixedStatus('kick',error.message,true)}finally{button.disabled=false}
+});
+void loadFixedDescriptions();
+</script>
+</body>
+</html>

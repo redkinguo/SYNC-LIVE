@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SYNC LIVE 統合コメント</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, "Noto Sans JP", "Yu Gothic UI", sans-serif; background:#101116; color:#eff0f4; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; height:100vh; display:flex; flex-direction:column; }
+    header { position:sticky; top:0; z-index:1; padding:15px 18px 12px; background:#171920; border-bottom:1px solid #2b2e38; }
+    .top { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    h1 { margin:0; font-size:16px; letter-spacing:.02em; }
+    .status { display:flex; align-items:center; gap:7px; color:#9298a5; font-size:11px; }
+    .dot { width:8px; height:8px; border-radius:50%; background:#777d89; }
+    .dot.on { background:#39d98a; box-shadow:0 0 8px #39d98a88; }
+    .sub { margin-top:5px; color:#8f95a2; font-size:11px; }
+    .stream-stats { display:grid; grid-template-columns:repeat(4,minmax(110px,1fr)); gap:7px; margin-top:10px; }
+    .audience-card { min-width:0; padding:7px 9px; border:1px solid #2b2e38; border-radius:8px; background:#20232b; }
+    .audience-head { display:flex; justify-content:space-between; gap:5px; font-size:10px; font-weight:700; }
+    .audience-state { color:#9298a5; font-size:9px; }
+    .audience-state.live { color:#39d98a; }
+    .audience-count { margin-top:3px; font-size:12px; font-weight:750; }
+    .audience-duration { margin-top:2px; color:#9298a5; font-size:9px; }
+    .tools { display:flex; align-items:center; gap:8px; margin-top:12px; }
+    #filters { display:flex; flex:1; gap:6px; overflow-x:auto; scrollbar-width:none; }
+    .filter { flex:none; border:1px solid #323641; border-radius:20px; background:#20232b; color:#b5bac5; padding:6px 9px; font-size:10px; cursor:pointer; }
+    .filter.active { border-color:#7660bf; background:#302942; color:#e2d9ff; }
+    .filter b { margin-left:4px; opacity:.65; font-weight:600; }
+    input { width:150px; padding:7px 9px; border:1px solid #343843; border-radius:8px; outline:none; background:#20232b; color:#f0f1f5; font-size:11px; }
+    input:focus { border-color:#7761c4; }
+    #messages { flex:1; min-height:0; overflow:auto; padding:4px 18px 16px; }
+    .message { display:grid; grid-template-columns:8px minmax(0,1fr) auto; gap:10px; padding:12px 2px; border-bottom:1px solid #252832; animation:arrive .18s ease-out; }
+    .bar { width:7px; height:7px; margin-top:5px; border-radius:50%; background:#89909e; }
+    .bar.twitch { background:#a970ff; } .bar.kick { background:#38d986; } .bar.tiktok { background:#ff4f8b; } .bar.youtube { background:#ff525b; }
+    .meta { display:flex; flex-wrap:wrap; align-items:center; gap:7px; }
+    .user { font-size:12px; font-weight:750; color:#e8eaf0; }
+    .platform { padding:2px 5px; border-radius:4px; background:#282b34; color:#b7bdc8; font-size:9px; font-weight:800; }
+    .platform.twitch { color:#d0b4ff; background:#332847; } .platform.kick { color:#8cecb6; background:#1f382b; } .platform.tiktok { color:#ff9db8; background:#3a2530; } .platform.youtube { color:#ff9ba0; background:#402528; }
+    time { color:#747b89; font-size:10px; white-space:nowrap; }
+    .text { margin-top:5px; color:#d1d4dc; font-size:13px; line-height:1.5; overflow-wrap:anywhere; white-space:pre-wrap; }
+    .empty { padding:50px 12px; color:#858c99; text-align:center; font-size:12px; }
+    @keyframes arrive { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    @media (max-width:520px) { header { padding:12px; } #messages { padding:4px 12px 14px; } input { width:105px; } .stream-stats { grid-template-columns:repeat(2,minmax(100px,1fr)); } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="top"><h1>統合コメント</h1><div class="status"><i class="dot" id="dot"></i><span id="status">接続中…</span></div></div>
+    <div class="sub">コメント専用ビュー · 新しいコメントは下に追加されます</div>
+    <div class="stream-stats" id="streamStats" aria-label="各配信先の同時視聴者数と配信時間"></div>
+    <div class="tools"><div id="filters"></div><input id="search" placeholder="コメント検索" aria-label="コメント検索"></div>
+  </header>
+  <main id="messages" aria-live="polite"></main>
+  <script>
+    const platforms = [
+      { id:'twitch', name:'Twitch' }, { id:'kick', name:'Kick' },
+      { id:'tiktok', name:'TikTok' }, { id:'youtube', name:'YouTube' },
+    ];
+    const list = document.getElementById('messages');
+    let messages = [];
+    let connected = {};
+    let audience = {};
+    let stream = {};
+    let filter = 'all';
+    let search = '';
+    const rowsById = new Map();
+    let filterSignature = '';
+    const safe = value => String(value ?? '');
+    function renderFilters() {
+      const counts = { all: messages.length };
+      for (const p of platforms) counts[p.id] = messages.filter(m => m.platform === p.id).length;
+      const options = [{ id:'all', name:'すべて' }, ...platforms];
+      const signature = options.map(p => `${p.id}:${counts[p.id] || 0}`).join('|');
+      const host = document.getElementById('filters');
+      if (signature !== filterSignature) {
+        filterSignature = signature;
+        host.innerHTML = options.map(p => `<button class="filter" data-filter="${p.id}">${p.name}<b>${counts[p.id] || 0}</b></button>`).join('');
+      }
+      host.querySelectorAll('[data-filter]').forEach(button => button.classList.toggle('active', button.dataset.filter === filter));
+    }
+    function render(scrollToBottom = false) {
+      const oldTop = list.scrollTop;
+      const wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 100;
+      const visible = messages.filter(m => (filter === 'all' || m.platform === filter) &&
+        (!search || `${m.user} ${m.text}`.toLowerCase().includes(search)));
+      const currentIds = new Set(messages.map(m => m.id));
+      const visibleIds = new Set(visible.map(m => m.id));
+      for (const [id, row] of rowsById) {
+        if (!currentIds.has(id)) { row.remove(); rowsById.delete(id); }
+        else if (!visibleIds.has(id)) row.remove();
+      }
+      if (!visible.length) {
+        if (!list.firstElementChild || !list.firstElementChild.classList.contains('empty')) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'コメントはまだありません';
+          list.replaceChildren(empty);
+        }
+      } else {
+        list.querySelector('.empty')?.remove();
+        let cursor = list.firstElementChild;
+        for (const m of visible) {
+          const name = platforms.find(p => p.id === m.platform)?.name || m.platform;
+          let row = rowsById.get(m.id);
+          if (!row) {
+            row = document.createElement('div');
+            row.className = 'message';
+            row.innerHTML = `<i class="bar ${m.platform}"></i><div><div class="meta"><span class="user"></span><span class="platform ${m.platform}">${name}</span></div><div class="text"></div></div><time></time>`;
+            rowsById.set(m.id, row);
+          }
+          const user = row.querySelector('.user');
+          const text = row.querySelector('.text');
+          const time = row.querySelector('time');
+          if (user.textContent !== safe(m.user)) user.textContent = safe(m.user);
+          if (text.textContent !== safe(m.text)) text.textContent = safe(m.text);
+          if (time.textContent !== safe(m.time || '')) time.textContent = safe(m.time || '');
+          if (row !== cursor) list.insertBefore(row, cursor);
+          cursor = row.nextElementSibling;
+        }
+      }
+      list.scrollTop = scrollToBottom || wasAtBottom ? list.scrollHeight : oldTop;
+    }
+    function setMessages(items, scroll = false) {
+      const ids = new Set();
+      messages = [...items].reverse().filter(item => {
+        if (!item?.id || ids.has(item.id)) return false;
+        ids.add(item.id); return true;
+      });
+      if (messages.length > 500) messages = messages.slice(-500);
+      renderFilters(); render(scroll);
+    }
+    function addMessage(message) {
+      if (!message) return;
+      if (message.id && messages.some(item => item.id === message.id)) return;
+      const wasAtBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 100;
+      messages.push(message);
+      if (messages.length > 500) messages.shift();
+      renderFilters(); render(wasAtBottom);
+    }
+    function updateStatus() {
+      const names = platforms.filter(p => connected[p.id]).map(p => p.name);
+      document.getElementById('dot').classList.toggle('on', names.length > 0);
+      document.getElementById('status').textContent = names.length ? `接続中: ${names.join('・')}` : '配信コメントの接続待ち';
+    }
+    function formatDuration(startedAt) {
+      const start = Date.parse(startedAt || '');
+      if (!Number.isFinite(start)) return '—';
+      const seconds = Math.max(0, Math.floor((Date.now() - start) / 1000));
+      return `${String(Math.floor(seconds / 3600)).padStart(2,'0')}:${String(Math.floor(seconds % 3600 / 60)).padStart(2,'0')}:${String(seconds % 60).padStart(2,'0')}`;
+    }
+    function updateAudience() {
+      const host = document.getElementById('streamStats');
+      if (!host.children.length) host.innerHTML = platforms.map(p => `<div class="audience-card" data-audience-card="${p.id}"><div class="audience-head"><span>${p.name}</span><span class="audience-state" data-audience-state></span></div><div class="audience-count" data-audience-count>同接 —</div><div class="audience-duration" data-audience-duration>配信時間 —</div></div>`).join('');
+      for (const p of platforms) {
+        const card = host.querySelector(`[data-audience-card="${p.id}"]`);
+        const status = audience[p.id] || {};
+        const live = status.live === true;
+        const label = live ? 'LIVE' : status.status === 'reconnecting' ? '再接続中' : status.status === 'waiting' ? '同接データ待ち' : status.status === 'unavailable' ? '未取得' : status.status === 'unconfigured' ? '未接続' : 'OFFLINE';
+        const state = card.querySelector('[data-audience-state]');
+        state.textContent = label;
+        state.classList.toggle('live', live);
+        const count = live && Number.isFinite(Number(status.viewers)) ? `${Number(status.viewers).toLocaleString()}人` : '—';
+        card.querySelector('[data-audience-count]').textContent = `同接 ${count}`;
+        const start = status.startedAt || (stream.running ? stream.startedAt : null);
+        card.querySelector('[data-audience-duration]').dataset.startedAt = start || '';
+        tickDurations();
+      }
+    }
+    function tickDurations() {
+      document.querySelectorAll('[data-audience-duration]').forEach(el => { el.textContent = `配信時間 ${formatDuration(el.dataset.startedAt)}`; });
+    }
+    document.getElementById('search').addEventListener('input', event => { search = event.target.value.trim().toLowerCase(); render(); });
+    window.addEventListener('sync-live-state', ({ detail }) => {
+      connected = detail.connected || {};
+      audience = detail.audience || audience;
+      stream = detail.stream || stream;
+      const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 100;
+      setMessages(detail.messages || [], atBottom);
+      updateStatus();
+      updateAudience();
+    });
+    const events = new EventSource('/api/events');
+    events.onopen = () => { document.getElementById('status').textContent = 'サーバー接続中'; };
+    events.onerror = () => { document.getElementById('dot').classList.remove('on'); document.getElementById('status').textContent = '再接続中…'; };
+    events.onmessage = event => {
+      const packet = JSON.parse(event.data);
+      if (packet.type === 'state') { connected = packet.data.connected || {}; audience = packet.data.audience || audience; stream = packet.data.stream || stream; setMessages(packet.data.messages || [], true); updateStatus(); updateAudience(); }
+      if (packet.type === 'message') addMessage(packet.data);
+      if (packet.type === 'connection') { connected[packet.data.platform] = packet.data.connected; updateStatus(); }
+      if (packet.type === 'audience') { audience = packet.data || {}; updateAudience(); }
+      if (packet.type === 'stream') { stream = packet.data || {}; updateAudience(); }
+    };
+    setInterval(tickDurations, 1000);
+  </script>
+<script>
+// Recover missed stream events without calling any external service.
+(() => {
+  let busy = false;
+  async function sync() {
+    if (busy) return;
+    busy = true;
+    try {
+      const response = await fetch('/api/state', { cache: 'no-store', signal: AbortSignal.timeout(5000) });
+      if (!response.ok) return;
+      const snapshot = await response.json();
+      window.dispatchEvent(new CustomEvent('sync-live-state', { detail: snapshot }));
+    } catch { /* EventSource and the next local poll both retry independently. */ }
+    finally { busy = false; }
+  }
+  setInterval(sync, 2000);
+  window.addEventListener('online', sync);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void sync(); });
+  void sync();
+})();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SYNC LIVE 公式連携</title>
+  <style>
+    :root { color-scheme: dark; font-family: "Yu Gothic UI", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #111319; color: #f3f4f7; }
+    main { max-width: 950px; margin: 0 auto; padding: 30px 18px 70px; }
+    a { color: #bba7ff; }
+    h1 { font-size: 27px; margin: 10px 0; }
+    h2 { margin: 0 0 5px; font-size: 20px; }
+    p { line-height: 1.65; color: #c4c8d3; }
+    .back { display: inline-block; margin-bottom: 10px; }
+    .notice, .card { border: 1px solid #343844; border-radius: 14px; background: #1b1e27; padding: 20px; margin: 17px 0; }
+    .notice { border-color: #7763af; }
+    .card ol { line-height: 1.9; padding-left: 22px; }
+    .status { color: #d1bfff; font-weight: 700; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 15px 0; }
+    label { display: grid; gap: 5px; color: #d7d9df; font-size: 14px; }
+    input, select { width: 100%; background: #111319; border: 1px solid #4b5060; color: white; border-radius: 8px; padding: 11px; font-size: 14px; }
+    button, .button { display: inline-block; background: #785bd2; border: 0; border-radius: 8px; color: white; font: inherit; font-weight: 700; padding: 11px 15px; cursor: pointer; text-decoration: none; margin: 4px 8px 4px 0; }
+    button:disabled, .button.disabled { opacity: .5; pointer-events: none; }
+    .secondary { background: #343947; }
+    .small { font-size: 12px; color: #9ca2af; }
+    .message { min-height: 18px; color: #bba7ff; }
+    @media(max-width: 650px) { .fields { grid-template-columns: 1fr; } }
+  </style>
+  <script src="/oauth-setup.js" defer></script>
+</head>
+<body>
+  <main>
+    <a class="back" href="/">← SYNC LIVEに戻る</a>
+    <a class="back" style="margin-left:18px" href="/metadata">配信タイトル・説明・タグ・画像の設定 →</a>
+    <h1>コメント・タイトルの公式連携</h1>
+    <div class="notice">この画面で各サービスのアプリIDを保存すると、公式の許可画面へ進めます。<b>許可ボタンはあなたが押してください。</b> クライアントシークレットとトークンはこのPC内の .env に保存し、画面へ再表示しません。</div>
+    <p id="result" class="message" role="status"></p>
+
+    <section class="card" data-provider="twitch">
+      <h2>Twitch</h2><p class="status" id="status-twitch">状態を確認中</p>
+      <ol>
+        <li><a href="https://dev.twitch.tv/console/apps" target="_blank" rel="noopener noreferrer">Twitch Developer Console</a>でアプリを登録。</li>
+        <li>OAuth Redirect URLに <code id="redirect-twitch"></code> を登録。</li>
+        <li>発行されたClient IDとClient Secretを下に入力。</li>
+      </ol>
+      <div class="fields"><label>Client ID<input id="id-twitch" autocomplete="off" spellcheck="false"></label><label>Client Secret<input id="secret-twitch" type="password" autocomplete="off" spellcheck="false"></label></div>
+      <button class="save" data-save="twitch">このPCに保存</button><a class="button secondary authorize disabled" id="authorize-twitch" href="/oauth/start/twitch">Twitchの許可画面へ</a><a class="button secondary" href="/oauth/start/twitch?include=profile-description">チャンネル説明の追加許可へ</a>
+      <p class="small">通常の許可: コメント閲覧、配信タイトル変更。チャンネル説明の追加許可では user:edit も要求します。</p>
+    </section>
+
+    <section class="card" data-provider="youtube">
+      <h2>YouTube</h2><p class="status" id="status-youtube">状態を確認中</p>
+      <ol>
+        <li><a href="https://console.cloud.google.com/apis/library/youtube.googleapis.com" target="_blank" rel="noopener noreferrer">Google Cloud</a>でYouTube Data API v3を有効化。</li>
+        <li><a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">認証情報</a>からOAuthクライアント（ウェブアプリ）を作成。</li>
+        <li>承認済みリダイレクトURIに <code id="redirect-youtube"></code> を登録。</li>
+        <li>Client IDとClient Secretを下に入力。</li>
+      </ol>
+      <div class="fields"><label>Client ID<input id="id-youtube" autocomplete="off" spellcheck="false"></label><label>Client Secret<input id="secret-youtube" type="password" autocomplete="off" spellcheck="false"></label></div>
+      <button class="save" data-save="youtube">このPCに保存</button><a class="button secondary authorize disabled" id="authorize-youtube" href="/oauth/start/youtube">Googleの許可画面へ</a>
+      <div id="youtube-broadcast" hidden><p>タイトル同期と配信開始に使う枠を選択</p><select id="broadcast-select"></select><button id="choose-broadcast">この配信枠を使用</button></div>
+      <p class="small">要求する権限: YouTube配信の閲覧・管理。許可後、現在のライブ配信枠を確認します。</p>
+    </section>
+
+    <section class="card" data-provider="kick">
+      <h2>Kick</h2><p class="status" id="status-kick">状態を確認中</p>
+      <ol>
+        <li><a href="https://kick.com/settings/developer" target="_blank" rel="noopener noreferrer">Kickの開発者設定</a>でアプリを作成。</li>
+        <li>Redirect URLに <code id="redirect-kick"></code> を登録。</li>
+        <li>Client IDとClient Secretを下に入力。</li>
+      </ol>
+      <div class="fields"><label>Client ID<input id="id-kick" autocomplete="off" spellcheck="false"></label><label>Client Secret<input id="secret-kick" type="password" autocomplete="off" spellcheck="false"></label></div>
+      <button class="save" data-save="kick">このPCに保存</button><a class="button secondary authorize disabled" id="authorize-kick" href="/oauth/start/kick">Kickの許可画面へ</a>
+      <p class="small">Kick側でユーザー情報（メールアドレスを含む）の閲覧権限が必須として表示されています。連携するときは許可画面の内容を確認してください。ほかにチャンネル閲覧・タイトル変更・コメントイベント購読を要求します。コメント受信には公開HTTPSのWebhook URLも必要です。</p>
+    </section>
+  </main>
+</body>
+</html>
