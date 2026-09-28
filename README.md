@@ -4,7 +4,7 @@ OBSから受け取った映像と音声を、FFmpegで再エンコードせず�
 
 ## 起動
 
-`dist\Relay\OBS-Multistream-Relay.exe` をダブルクリックします。EXEがない場合は `run_relay.bat` でビルドして起動できます。ビルドには .NET 10 SDKが必要です。配布EXEには.NETランタイムが含まれます。
+ルートの `OBS-Multistream-Relay.exe` をダブルクリックします。EXEがない場合は `scripts\build_relay.ps1` でビルドします。ビルドには .NET 10 SDKが必要です。配布EXEには.NETランタイムが含まれます。
 
 FFmpegはPATHに登録するか、画面の「FFmpeg」で `ffmpeg.exe` を選択してください。
 
@@ -20,7 +20,7 @@ FFmpegはPATHに登録するか、画面の「FFmpeg」で `ffmpeg.exe` を選�
 
 ## 配信先と設定ファイル
 
-配信先のサーバーURLとストリームキーを入力します。ストリームキーはWindowsのユーザーアカウントに紐づくDPAPIで暗号化し、EXEと同じフォルダーの `config.json` に保存します。以前のアプリの設定は初回ビルド時に移行します。
+配信先のサーバーURLとストリームキーを入力します。ストリームキーはWindowsのユーザーアカウントに紐づくDPAPIで暗号化し、`data\Relay\config.json` に保存します。以前のアプリの設定は初回ビルド時に移行します。
 
 旧設定のバックアップは `data\legacy-relay-config.json` に置いています。ビルド先を消しても、次のビルド時に設定を復元できます。
 
@@ -34,10 +34,10 @@ FFmpegはPATHに登録するか、画面の「FFmpeg」で `ffmpeg.exe` を選�
 ## ビルド
 
 ```powershell
-.\build_relay.ps1
+.\scripts\build_relay.ps1
 ```
 
-生成先は `dist\Relay\OBS-Multistream-Relay.exe` です。
+生成先はルートの `OBS-Multistream-Relay.exe` です。
 
 ## Web版（React + C#）
 
@@ -62,7 +62,7 @@ src/
     Client/               React画面
     Server/               C# ASP.NET Coreサーバー
 dist/
-  Relay/                  中継アプリEXEと設定
+  Relay/                  中継アプリのビルド中間出力
   Web/                    Web版EXE・画面・設定
 data/                     旧設定のバックアップ（Git管理対象外）
 docs/                     移行・確認記録

@@ -28,7 +28,7 @@ internal sealed class RelayConfig
         new() { Name = "Kick", Enabled = true }
     ];
 
-    public static string ConfigPath => System.IO.Path.Combine(AppContext.BaseDirectory, "config.json");
+    public static string ConfigPath => System.IO.Path.Combine(AppContext.BaseDirectory, "data", "Relay", "config.json");
 
     public static RelayConfig Load()
     {
@@ -91,6 +91,7 @@ internal sealed class RelayConfig
         };
         var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions { WriteIndented = true });
         var temporary = ConfigPath + ".tmp";
+        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(ConfigPath)!);
         File.WriteAllText(temporary, json, Encoding.UTF8);
         File.Move(temporary, ConfigPath, true);
     }
