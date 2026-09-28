@@ -41,13 +41,13 @@ FFmpegはPATHに登録するか、画面の「FFmpeg」で `ffmpeg.exe` を選�
 
 ## Web版（React + C#）
 
-`build_web.ps1` でReact画面とC#サーバーをビルドします。`dist\Web\SYNC-LIVE-Web.exe` を実行すると、ブラウザーで `http://127.0.0.1:4317` が開きます。初回のビルドにはNode.jsと.NET 10 SDKが必要ですが、EXEの実行にはどちらも不要です。
+`scripts\build_web.ps1` でReact画面とC#サーバーをビルドします。ルートの `SYNC-LIVE-Web.exe` を実行すると、ブラウザーで `http://127.0.0.1:4317` が開きます。初回のビルドにはNode.jsと.NET 10 SDKが必要ですが、EXEの実行にはどちらも不要です。
 
-Web版の設定は `dist\Web\.env` です。まずデモモードで画面・コメント・オーバーレイを確認できます。実配信では `LIVEBRIDGE_MODE=live` とTwitch、Kick、YouTubeのRTMP URLを設定し、FFmpegをインストールしてください。OBSのサーバーは `rtmp://127.0.0.1:1935/live`、キーは `stream` です。OAuth認証は画面の「コメント／タイトル連携を設定」から行えます。TikTokは対象外です。
+Web版の設定は `data\Web\.env` です。まずデモモードで画面・コメント・オーバーレイを確認できます。実配信では `LIVEBRIDGE_MODE=live` とTwitch、Kick、YouTubeのRTMP URLを設定し、FFmpegをインストールしてください。OBSのサーバーは `rtmp://127.0.0.1:1935/live`、キーは `stream` です。OAuth認証は画面の「コメント／タイトル連携を設定」から行えます。TikTokは対象外です。
 
-Web版は `run_web.bat` からも起動できます。中継アプリとWeb版を同時に使う場合は、ローカルRTMPポートが重ならないように設定してください。
+中継アプリとWeb版を同時に使う場合は、ローカルRTMPポートが重ならないように設定してください。
 
-`prepare_stream.bat` はOBSを開き、Web版のRTMP待機を準備してダッシュボードを表示します。実配信はOBS側の「配信開始」を押した時に始まります。
+`scripts\prepare_stream.bat` はOBSを開き、Web版のRTMP待機を準備してダッシュボードを表示します。実配信はOBS側の「配信開始」を押した時に始まります。
 
 Kickのコメントを受信する場合は、公開HTTPSトンネルを `127.0.0.1:4320` に向け、その公開URLを `.env` の `KICK_WEBHOOK_PUBLIC_URL` に設定します。この専用ポートは署名付きKick WebhookのPOSTだけを受け付けます。
 
@@ -56,18 +56,24 @@ YouTubeコメントは旧版と同様に公開ページ経由で取得します�
 ## ディレクトリ
 
 ```text
+OBS-Multistream-Relay.exe  中継アプリの起動
+SYNC-LIVE-Web.exe          Web版の起動
+README.md                 使い方
+scripts/                  ビルド・OBS配信準備
 src/
   ObsMultistreamRelay/     C# WinForms中継アプリ
   SyncLiveWeb/
     Client/               React画面
     Server/               C# ASP.NET Coreサーバー
-dist/
-  Relay/                  中継アプリのビルド中間出力
-  Web/                    Web版EXE・画面・設定
-data/                     旧設定のバックアップ（Git管理対象外）
+assets/web/               Web画面の配布ファイル
+data/                    設定と旧設定バックアップ（Git管理対象外）
+  Relay/config.json       中継アプリ設定
+  Web/.env                Web版設定
+  Web/stream-descriptions.json  固定説明文
+dist/                    ビルドの中間出力（起動には不要）
 docs/                     移行・確認記録
 ```
 
-Web版を別の場所へ配布するときは `dist\Web` フォルダー全体をコピーしてください。`wwwroot` にReactの画面ファイルがあります。配信先キーや認証情報を含む設定ファイルは公開しないでください。
+Web版を別の場所へ移すときは、ルートの `SYNC-LIVE-Web.exe` と `assets`、`data\Web`、`THIRD-PARTY-NOTICES.txt` を同じ構成でコピーしてください。中継アプリはルートのEXEと `data\Relay` をコピーします。EXEと生成済み画面・個人設定はGit管理対象外です。配信先キーや認証情報を含む設定ファイルは公開しないでください。
 
 移行範囲と確認内容は `docs\migration-review.md` に記載しています。

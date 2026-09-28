@@ -1,7 +1,8 @@
 $ErrorActionPreference = 'Stop'
-Set-Location -LiteralPath $PSScriptRoot
+$repoRoot = Split-Path -Parent $PSScriptRoot
+Set-Location -LiteralPath $repoRoot
 
-$webDir = Join-Path $PSScriptRoot 'dist\Web'
+$webDir = $repoRoot
 $webExe = Join-Path $webDir 'SYNC-LIVE-Web.exe'
 if (-not (Test-Path -LiteralPath $webExe)) { & (Join-Path $PSScriptRoot 'build_web.ps1') }
 
@@ -13,7 +14,7 @@ if (Test-Path -LiteralPath $obsExe) {
 }
 
 $port = 4317
-$envFile = Join-Path $webDir '.env'
+$envFile = Join-Path $repoRoot 'data\Web\.env'
 if (Test-Path -LiteralPath $envFile) {
   foreach ($line in Get-Content -LiteralPath $envFile) {
     if ($line -match '^\s*LIVEBRIDGE_PORT\s*=\s*"?([0-9]+)"?\s*$') { $port = [int]$Matches[1]; break }

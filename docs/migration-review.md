@@ -16,7 +16,7 @@
 | YouTube公開枠の準備、超低遅延、自動開始 | YouTubeBroadcastService |
 | 同時視聴者数、配信時間 | AudienceService |
 | OBS WebSocket開始・停止 | ObsControl |
-| OBS・Webサーバー・中継待機の準備 | prepare_stream.ps1 |
+| OBS・Webサーバー・中継待機の準備 | scripts/prepare_stream.ps1 |
 
 TikTok機能はユーザー指定により削除。旧Web版の重複コピー、旧ZIP、旧言語のソース・テスト・ビルド定義も削除。
 
@@ -25,7 +25,7 @@ TikTok機能はユーザー指定により削除。旧Web版の重複コピー�
 - 中継の開始処理を直列化し、配信先検証をYouTube枠の準備より前に実行。
 - 古いFFmpegプロセスの終了通知や再待機予約が、新しい配信状態を上書きしないよう管理。
 - デモモードの停止操作によるOBSへの接続を抑止。
-- Web EXEの画面ファイルの基準位置をEXE所在フォルダーに固定。
+- Web EXEの画面ファイルの基準位置をEXE所在フォルダーのassets/webに固定。
 - YouTube更新リクエストから読み取り専用の項目を除外。
 - SSEのタイムアウト処理、購読キューの上限、停止後の視聴者数更新を修正。
 - 設定値の型確認、設定ファイルの一時ファイル経由の保存を追加。
@@ -45,3 +45,7 @@ YouTube公開ページコメントの取得方式は旧版に合わせていま�
 - [YouTube liveBroadcasts.update](https://developers.google.com/youtube/v3/live/docs/liveBroadcasts/update)
 - [YouTube videos.update](https://developers.google.com/youtube/v3/docs/videos/update)
 - [OBS WebSocket protocol](https://github.com/obsproject/obs-websocket/blob/master/docs/generated/protocol.md)
+
+## 起動ファイルの整理
+
+ルートに2つのEXEを配置。ビルド・配信準備スクリプトはscriptsに集約し、単純な起動用スクリプトは削除しました。設定はdata/Relayとdata/Web、Web画面はassets/webに配置します。ビルド時に旧dist配下の設定を、新しい設定が存在しない場合のみコピーします。

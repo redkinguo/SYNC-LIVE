@@ -3,7 +3,9 @@ using System.Text.Json;
 using SyncLiveWeb;
 
 var root = AppContext.BaseDirectory;
-var env = new EnvFile(Path.Combine(root, ".env"));
+var settingsDirectory = Path.Combine(root, "data", "Web");
+Directory.CreateDirectory(settingsDirectory);
+var env = new EnvFile(Path.Combine(settingsDirectory, ".env"));
 var host = env.Get("LIVEBRIDGE_HOST", "127.0.0.1");
 var port = int.TryParse(env.Get("LIVEBRIDGE_PORT", "4317"), out var configuredPort) ? configuredPort : 4317;
 var kickPort = int.TryParse(env.Get("KICK_WEBHOOK_PORT", "4320"), out var configuredKickPort) ? configuredKickPort : 4320;
@@ -11,7 +13,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 {
     Args = args,
     ContentRootPath = root,
-    WebRootPath = Path.Combine(root, "wwwroot")
+    WebRootPath = Path.Combine(root, "assets", "web")
 });
 builder.WebHost.UseUrls($"http://{host}:{port}", $"http://127.0.0.1:{kickPort}");
 var app = builder.Build();

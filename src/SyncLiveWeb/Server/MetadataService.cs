@@ -10,7 +10,7 @@ internal sealed class MetadataService
     private readonly EnvFile env;
     private readonly OAuthService oauth;
     private readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
-    private readonly string descriptionsPath = Path.Combine(AppContext.BaseDirectory, "data", "stream-descriptions.json");
+    private readonly string descriptionsPath = Path.Combine(AppContext.BaseDirectory, "data", "Web", "stream-descriptions.json");
     public MetadataService(EnvFile env, OAuthService oauth) { this.env = env; this.oauth = oauth; }
 
     public async Task<object> Get(string platform)
