@@ -38,3 +38,36 @@ FFmpegはPATHに登録するか、画面の「FFmpeg」で `ffmpeg.exe` を選�
 ```
 
 生成先は `dist\Relay\OBS-Multistream-Relay.exe` です。
+
+## Web版（React + C#）
+
+`build_web.ps1` でReact画面とC#サーバーをビルドします。`dist\Web\SYNC-LIVE-Web.exe` を実行すると、ブラウザーで `http://127.0.0.1:4317` が開きます。初回のビルドにはNode.jsと.NET 10 SDKが必要ですが、EXEの実行にはどちらも不要です。
+
+Web版の設定は `dist\Web\.env` です。まずデモモードで画面・コメント・オーバーレイを確認できます。実配信では `LIVEBRIDGE_MODE=live` とTwitch、Kick、YouTubeのRTMP URLを設定し、FFmpegをインストールしてください。OBSのサーバーは `rtmp://127.0.0.1:1935/live`、キーは `stream` です。OAuth認証は画面の「コメント／タイトル連携を設定」から行えます。TikTokは対象外です。
+
+Web版は `run_web.bat` からも起動できます。中継アプリとWeb版を同時に使う場合は、ローカルRTMPポートが重ならないように設定してください。
+
+`prepare_stream.bat` はOBSを開き、Web版のRTMP待機を準備してダッシュボードを表示します。実配信はOBS側の「配信開始」を押した時に始まります。
+
+Kickのコメントを受信する場合は、公開HTTPSトンネルを `127.0.0.1:4320` に向け、その公開URLを `.env` の `KICK_WEBHOOK_PUBLIC_URL` に設定します。この専用ポートは署名付きKick WebhookのPOSTだけを受け付けます。
+
+YouTubeコメントは旧版と同様に公開ページ経由で取得します。`YOUTUBE_CHANNEL_ID` または `YOUTUBE_BROADCAST_ID` を設定してください。コメント取得のためにYouTube Data APIをポーリングすることはありません。配信枠・タイトル・視聴者数の操作と取得にはOAuthと公式APIを使用します。
+
+## ディレクトリ
+
+```text
+src/
+  ObsMultistreamRelay/     C# WinForms中継アプリ
+  SyncLiveWeb/
+    Client/               React画面
+    Server/               C# ASP.NET Coreサーバー
+dist/
+  Relay/                  中継アプリEXEと設定
+  Web/                    Web版EXE・画面・設定
+data/                     旧設定のバックアップ（Git管理対象外）
+docs/                     移行・確認記録
+```
+
+Web版を別の場所へ配布するときは `dist\Web` フォルダー全体をコピーしてください。`wwwroot` にReactの画面ファイルがあります。配信先キーや認証情報を含む設定ファイルは公開しないでください。
+
+移行範囲と確認内容は `docs\migration-review.md` に記載しています。

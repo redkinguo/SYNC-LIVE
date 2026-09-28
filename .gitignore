@@ -5,4 +5,7 @@ build/
 dist/
 **/bin/
 **/obj/
+**/node_modules/
+**/.env
+src/SyncLiveWeb/Server/wwwroot/
 data/
