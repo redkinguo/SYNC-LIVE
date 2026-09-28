@@ -3,3 +3,12 @@ config.json
 __pycache__/
 build/
 dist/
+**/bin/
+**/obj/
+**/node_modules/
+**/.env
+src/SyncLiveWeb/Server/wwwroot/
+data/
+/OBS-Multistream-Relay.exe
+/SYNC-LIVE-Web.exe
+/assets/
